@@ -21,7 +21,7 @@ namespace BoilerplateWebApi.Controllers
 
             return Ok(customer.CustomerOperations);
         }
-        [HttpGet("{operationId }")]
+        [HttpGet("{operationId}")]
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperation(
             int customerId, int operationId)
         {
