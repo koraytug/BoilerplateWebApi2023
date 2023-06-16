@@ -139,5 +139,27 @@ namespace BoilerplateWebApi.Controllers
 
             return NoContent();
         }
+
+        [HttpDelete("{operationId}")]
+        public ActionResult DeleteCustomerOperation(int customerId,int operationId)
+        {
+            var customer = CustomerDataStore.Instance.Customers
+             .FirstOrDefault(x => x.Id == customerId);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            var operationFromStore = customer.CustomerOperations
+               .FirstOrDefault(x => x.Id == operationId);
+            if (operationFromStore == null)
+            {
+                return NotFound();
+            }
+
+            customer.CustomerOperations.Remove(operationFromStore);
+
+            return NoContent();
+        }
     }
 }
