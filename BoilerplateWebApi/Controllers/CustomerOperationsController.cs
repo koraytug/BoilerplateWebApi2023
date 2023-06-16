@@ -69,9 +69,9 @@ namespace BoilerplateWebApi.Controllers
 
             return CreatedAtRoute("GetCustomerOperation", new
             {
-                customerId ,
-                customerOperationId = finalOperation.Id
-            }, finalOperation);
+                customerId= customerId,
+                operationId = finalOperation.Id
+            }, finalOperation); 
         }
     }
 }
