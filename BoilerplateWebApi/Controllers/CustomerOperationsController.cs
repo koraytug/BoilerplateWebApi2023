@@ -21,7 +21,7 @@ namespace BoilerplateWebApi.Controllers
 
             return Ok(customer.CustomerOperations);
         }
-        [HttpGet("{operationId}")]
+        [HttpGet("{operationId}",Name = "GetCustomerOperation")]
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperation(
             int customerId, int operationId)
         {
@@ -42,6 +42,36 @@ namespace BoilerplateWebApi.Controllers
             }
 
             return Ok(customerOperation);
+        }
+
+        [HttpPost]
+        public ActionResult<CustomerOperationsDto> CreateCustomerOperation(int customerId, CustomerOperationForCreationDto operation)
+        {
+            var customer = CustomerDataStore.Instance.Customers
+                .FirstOrDefault (x => x.Id == customerId);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            var maxOpeatarionId = CustomerDataStore.Instance
+                .Customers.SelectMany(
+                c => c.CustomerOperations).Max(p => p.Id);
+
+            var finalOperation = new CustomerOperationsDto
+            {
+                Id = ++maxOpeatarionId,
+                Name = operation.Name,
+                Price = operation.Price
+            };
+
+            customer.CustomerOperations.Add(finalOperation);
+
+            return CreatedAtRoute("GetCustomerOperation", new
+            {
+                customerId ,
+                customerOperationId = finalOperation.Id
+            }, finalOperation);
         }
     }
 }
