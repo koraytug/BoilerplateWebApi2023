@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace BoilerplateWebApi.Controllers
 {
@@ -9,6 +10,11 @@ namespace BoilerplateWebApi.Controllers
     [ApiController]
     public class CustomerOperationsController : ControllerBase
     {
+        private readonly ILogger<CustomerOperationsController> logger;
+
+        public CustomerOperationsController(ILogger<CustomerOperationsController> logger) {
+            this.logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+        }
         [HttpGet]
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperations(int customerId)
         {
@@ -26,23 +32,33 @@ namespace BoilerplateWebApi.Controllers
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperation(
             int customerId, int operationId)
         {
-            var customer = CustomerDataStore.Instance.Customers
+            try
+            {
+                var customer = CustomerDataStore.Instance.Customers
                 .FirstOrDefault(x => x.Id == customerId);
 
-            if (customer == null)
-            {
-                return NotFound();
+                if (customer == null)
+                {
+                    logger.LogInformation($"Customer with id {customerId} is not valid");
+                    return NotFound();
+                }
+
+                var customerOperation = customer.CustomerOperations
+                    .FirstOrDefault(o => o.Id == operationId);
+
+                if (customerOperation == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(customerOperation);
             }
-
-            var customerOperation = customer.CustomerOperations
-                .FirstOrDefault(o => o.Id == operationId);
-
-            if (customerOperation == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                logger.LogCritical($"Customer with id {customerId} is not valid", ex);
+                return StatusCode(500, "A problem happened while handling your request");
             }
-
-            return Ok(customerOperation);
+            
         }
 
         [HttpPost]
