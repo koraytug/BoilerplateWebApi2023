@@ -1,5 +1,6 @@
 ﻿using BoilerplateWebApi.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BoilerplateWebApi.Controllers
@@ -21,7 +22,7 @@ namespace BoilerplateWebApi.Controllers
 
             return Ok(customer.CustomerOperations);
         }
-        [HttpGet("{operationId}",Name = "GetCustomerOperation")]
+        [HttpGet("{operationId}", Name = "GetCustomerOperation")]
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperation(
             int customerId, int operationId)
         {
@@ -34,7 +35,7 @@ namespace BoilerplateWebApi.Controllers
             }
 
             var customerOperation = customer.CustomerOperations
-                .FirstOrDefault(o=> o.Id == operationId);
+                .FirstOrDefault(o => o.Id == operationId);
 
             if (customerOperation == null)
             {
@@ -48,7 +49,7 @@ namespace BoilerplateWebApi.Controllers
         public ActionResult<CustomerOperationsDto> CreateCustomerOperation(int customerId, CustomerOperationForCreationDto operation)
         {
             var customer = CustomerDataStore.Instance.Customers
-                .FirstOrDefault (x => x.Id == customerId);
+                .FirstOrDefault(x => x.Id == customerId);
             if (customer == null)
             {
                 return NotFound();
@@ -69,13 +70,13 @@ namespace BoilerplateWebApi.Controllers
 
             return CreatedAtRoute("GetCustomerOperation", new
             {
-                customerId= customerId,
+                customerId = customerId,
                 operationId = finalOperation.Id
-            }, finalOperation); 
+            }, finalOperation);
         }
 
         [HttpPut("{operationId}")]
-        public ActionResult UpdateCustomerOperation(int customerId,int operationId, CustomerOperationForUpdatingDto customerOperation )
+        public ActionResult UpdateCustomerOperation(int customerId, int operationId, CustomerOperationForUpdatingDto customerOperation)
         {
             var customer = CustomerDataStore.Instance.Customers
                 .FirstOrDefault(x => x.Id == customerId);
@@ -85,7 +86,7 @@ namespace BoilerplateWebApi.Controllers
             }
 
             //Find operation
-            var operationFromStore  = customer.CustomerOperations
+            var operationFromStore = customer.CustomerOperations
                 .FirstOrDefault(x => x.Id == operationId);
             if (operationFromStore == null)
             {
@@ -94,6 +95,47 @@ namespace BoilerplateWebApi.Controllers
 
             operationFromStore.Name = customerOperation.Name;
             operationFromStore.Price = customerOperation.Price;
+
+            return NoContent();
+        }
+
+        [HttpPatch("{operationId}")]
+        public ActionResult PartiallyUpdateCustomerOperation(int customerId, int operationId, JsonPatchDocument<CustomerOperationForUpdatingDto> patchDocument)
+        {
+            var customer = CustomerDataStore.Instance.Customers
+                .FirstOrDefault(x => x.Id == customerId);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            var operationFromStore = customer.CustomerOperations
+               .FirstOrDefault(x => x.Id == operationId);
+            if (operationFromStore == null)
+            {
+                return NotFound();
+            }
+
+            var customerOperationToPatch = new CustomerOperationForUpdatingDto
+            {
+                Name = operationFromStore.Name,
+                Price = operationFromStore.Price
+            };
+
+            patchDocument.ApplyTo(customerOperationToPatch, ModelState);
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            if (!TryValidateModel(customerOperationToPatch))
+            {
+                return BadRequest();
+            }
+
+            operationFromStore.Name = customerOperationToPatch.Name;
+            operationFromStore.Price = customerOperationToPatch.Price;
 
             return NoContent();
         }
