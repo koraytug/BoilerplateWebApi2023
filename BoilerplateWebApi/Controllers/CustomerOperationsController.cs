@@ -73,5 +73,29 @@ namespace BoilerplateWebApi.Controllers
                 operationId = finalOperation.Id
             }, finalOperation); 
         }
+
+        [HttpPut("{operationId}")]
+        public ActionResult UpdateCustomerOperation(int customerId,int operationId, CustomerOperationForUpdatingDto customerOperation )
+        {
+            var customer = CustomerDataStore.Instance.Customers
+                .FirstOrDefault(x => x.Id == customerId);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            //Find operation
+            var operationFromStore  = customer.CustomerOperations
+                .FirstOrDefault(x => x.Id == operationId);
+            if (operationFromStore == null)
+            {
+                return NotFound();
+            }
+
+            operationFromStore.Name = customerOperation.Name;
+            operationFromStore.Price = customerOperation.Price;
+
+            return NoContent();
+        }
     }
 }
