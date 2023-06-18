@@ -1,4 +1,5 @@
 ﻿using BoilerplateWebApi.Models;
+using BoilerplateWebApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -11,14 +12,20 @@ namespace BoilerplateWebApi.Controllers
     public class CustomerOperationsController : ControllerBase
     {
         private readonly ILogger<CustomerOperationsController> logger;
+        private readonly IMailService localMailService;
+        private readonly CustomerDataStore customerDataStore;
 
-        public CustomerOperationsController(ILogger<CustomerOperationsController> logger) {
+        public CustomerOperationsController(ILogger<CustomerOperationsController> logger,
+            IMailService localMailService, CustomerDataStore customerDataStore) {
             this.logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+            this.localMailService = localMailService ?? throw new System.ArgumentNullException(nameof(localMailService));
+            this.customerDataStore = customerDataStore ?? throw new System.ArgumentNullException(nameof(customerDataStore));
+            ;
         }
         [HttpGet]
         public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperations(int customerId)
         {
-            var customer = CustomerDataStore.Instance.Customers.FirstOrDefault(
+            var customer = this.customerDataStore.Customers.FirstOrDefault(
                 x => x.Id == customerId);
 
             if (customer == null)
@@ -34,7 +41,7 @@ namespace BoilerplateWebApi.Controllers
         {
             try
             {
-                var customer = CustomerDataStore.Instance.Customers
+                var customer = this.customerDataStore.Customers
                 .FirstOrDefault(x => x.Id == customerId);
 
                 if (customer == null)
@@ -64,14 +71,14 @@ namespace BoilerplateWebApi.Controllers
         [HttpPost]
         public ActionResult<CustomerOperationsDto> CreateCustomerOperation(int customerId, CustomerOperationForCreationDto operation)
         {
-            var customer = CustomerDataStore.Instance.Customers
+            var customer = this.customerDataStore.Customers
                 .FirstOrDefault(x => x.Id == customerId);
             if (customer == null)
             {
                 return NotFound();
             }
 
-            var maxOpeatarionId = CustomerDataStore.Instance
+            var maxOpeatarionId = this.customerDataStore
                 .Customers.SelectMany(
                 c => c.CustomerOperations).Max(p => p.Id);
 
@@ -92,9 +99,10 @@ namespace BoilerplateWebApi.Controllers
         }
 
         [HttpPut("{operationId}")]
-        public ActionResult UpdateCustomerOperation(int customerId, int operationId, CustomerOperationForUpdatingDto customerOperation)
+        public ActionResult UpdateCustomerOperation(int customerId, int operationId, 
+            CustomerOperationForUpdatingDto customerOperation)
         {
-            var customer = CustomerDataStore.Instance.Customers
+            var customer = this.customerDataStore.Customers
                 .FirstOrDefault(x => x.Id == customerId);
             if (customer == null)
             {
@@ -118,7 +126,7 @@ namespace BoilerplateWebApi.Controllers
         [HttpPatch("{operationId}")]
         public ActionResult PartiallyUpdateCustomerOperation(int customerId, int operationId, JsonPatchDocument<CustomerOperationForUpdatingDto> patchDocument)
         {
-            var customer = CustomerDataStore.Instance.Customers
+            var customer = this.customerDataStore.Customers
                 .FirstOrDefault(x => x.Id == customerId);
             if (customer == null)
             {
@@ -159,7 +167,7 @@ namespace BoilerplateWebApi.Controllers
         [HttpDelete("{operationId}")]
         public ActionResult DeleteCustomerOperation(int customerId,int operationId)
         {
-            var customer = CustomerDataStore.Instance.Customers
+            var customer = this.customerDataStore.Customers
              .FirstOrDefault(x => x.Id == customerId);
             if (customer == null)
             {
@@ -174,6 +182,8 @@ namespace BoilerplateWebApi.Controllers
             }
 
             customer.CustomerOperations.Remove(operationFromStore);
+            localMailService.Send("Customer operation deleted.",
+                $"Customer operation {operationFromStore.Name} with price {operationFromStore.Price} was deleted");
 
             return NoContent();
         }

@@ -6,7 +6,7 @@ namespace BoilerplateWebApi
     {
         public List<CustomerDto> Customers { get; set; }
 
-        public static CustomerDataStore Instance { get; set; } = new CustomerDataStore();
+        //public static CustomerDataStore Instance { get; set; } = new CustomerDataStore();
 
         public CustomerDataStore()
         {

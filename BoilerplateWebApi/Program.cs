@@ -1,3 +1,5 @@
+using BoilerplateWebApi;
+using BoilerplateWebApi.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Serilog;
 
@@ -22,6 +24,14 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//AddTransient worksBest for lightweight, stateless services
+#if DEBUG
+builder.Services.AddTransient<IMailService, LocalMailService>();
+#else
+builder.Services.AddTransient<IMailService, CloudMailService>();
+#endif
+
+builder.Services.AddSingleton<CustomerDataStore> ();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 
 var app = builder.Build();
