@@ -1,9 +1,17 @@
-﻿namespace BoilerplateWebApi.Services
+﻿using Microsoft.Extensions.Configuration;
+
+namespace BoilerplateWebApi.Services
 {
     public class LocalMailService : IMailService
     {
-        private string _mailTo = "admin@somecompany.com";
-        private string _mailFrom = "noreply@somecompany.com";
+        private readonly string _mailTo = string.Empty;
+        private readonly string _mailFrom = string.Empty;
+
+        public LocalMailService(IConfiguration configuration)
+        {
+            this._mailTo = configuration["mailSettings:mailToAddress"];
+            this._mailFrom = configuration["mailSettings:mailFromAddress"];
+        }
 
         public void Send(string subject, string message)
         {
