@@ -36,9 +36,11 @@ builder.Services.AddTransient<IMailService, CloudMailService>();
 builder.Services.AddSingleton<CustomerDataStore> ();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddDbContext<CustomerInfoContext>(
-    dbContextOptions=>dbContextOptions.UseSqlite( builder.Configuration["ConnectionStrings:CustomerInfoDbConnectionString"];
+    dbContextOptions=>dbContextOptions.UseSqlite( builder.Configuration["ConnectionStrings:CustomerInfoDbConnectionString"]));
 
 builder.Services.AddScoped<ICustomerInfoRepository, CustomerInfoRepository>();
+
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 var app = builder.Build();
 
