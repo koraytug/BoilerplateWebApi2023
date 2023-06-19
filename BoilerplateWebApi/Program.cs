@@ -1,6 +1,8 @@
 using BoilerplateWebApi;
+using BoilerplateWebApi.DbContexts;
 using BoilerplateWebApi.Services;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -33,6 +35,8 @@ builder.Services.AddTransient<IMailService, CloudMailService>();
 
 builder.Services.AddSingleton<CustomerDataStore> ();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
+builder.Services.AddDbContext<CustomerInfoContext>(
+    dbContextOptions=>dbContextOptions.UseSqlite( builder.Configuration["ConnectionStrings:CustomerInfoDbConnectionString"];
 
 var app = builder.Build();
 
