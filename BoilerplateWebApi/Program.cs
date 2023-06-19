@@ -38,6 +38,8 @@ builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddDbContext<CustomerInfoContext>(
     dbContextOptions=>dbContextOptions.UseSqlite( builder.Configuration["ConnectionStrings:CustomerInfoDbConnectionString"];
 
+builder.Services.AddScoped<ICustomerInfoRepository, CustomerInfoRepository>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
