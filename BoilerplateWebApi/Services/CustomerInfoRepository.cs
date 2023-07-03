@@ -24,6 +24,11 @@ namespace BoilerplateWebApi.Services
                     .Where(c => c.Id == customerId).FirstOrDefaultAsync();
         }
 
+        public async Task<bool> CustomerExistsAsync(int customerId)
+        {
+            return await context.Customers.AnyAsync(c => c.Id == customerId);
+        }
+
         public async Task<IEnumerable<Customer>> GetCustomersAsync()
         {
             return await context.Customers.OrderBy(c => c.Name).ToListAsync();
@@ -39,6 +44,26 @@ namespace BoilerplateWebApi.Services
         {
             return await context.CustomerOperations
                   .Where(c => c.CustomerId == customerId).ToListAsync();
+        }
+
+        public async Task AddCustomerOperationForCustomerAsync(int customerId, CustomerOperation operation)
+        {
+            var customer = await GetCustomerAsync(customerId,false);
+
+            if(customer != null)
+            {
+                customer.CustomerOperation?.Add(operation);
+            }
+        }
+
+        public async Task<bool> SaveChangesAsync()
+        {
+            return (await context.SaveChangesAsync() >= 0);
+        }
+
+        public void DeleteCustomerOperation(CustomerOperation operation)
+        {
+            context.CustomerOperations.Remove(operation);
         }
     }
 }

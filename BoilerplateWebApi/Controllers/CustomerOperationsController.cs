@@ -1,4 +1,6 @@
-﻿using BoilerplateWebApi.Models;
+﻿using AutoMapper;
+using BoilerplateWebApi.Entities;
+using BoilerplateWebApi.Models;
 using BoilerplateWebApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
@@ -13,177 +15,163 @@ namespace BoilerplateWebApi.Controllers
     {
         private readonly ILogger<CustomerOperationsController> logger;
         private readonly IMailService localMailService;
-        private readonly CustomerDataStore customerDataStore;
+        private readonly ICustomerInfoRepository customerInfoRepository;
+        private readonly IMapper mapper;
 
         public CustomerOperationsController(ILogger<CustomerOperationsController> logger,
-            IMailService localMailService, CustomerDataStore customerDataStore) {
-            this.logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+            IMailService localMailService,
+            ICustomerInfoRepository customerInfoRepository,
+            IMapper mapper)
+        {
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.localMailService = localMailService ?? throw new System.ArgumentNullException(nameof(localMailService));
-            this.customerDataStore = customerDataStore ?? throw new System.ArgumentNullException(nameof(customerDataStore));
+            this.customerInfoRepository = customerInfoRepository;
+            this.mapper = mapper ?? throw new ArgumentNullException(nameof(mapper)); ;
             ;
         }
-        [HttpGet]
-        public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperations(int customerId)
-        {
-            var customer = this.customerDataStore.Customers.FirstOrDefault(
-                x => x.Id == customerId);
 
-            if (customer == null)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<CustomerOperationsDto>>> GetCustomerOperations(int customerId)
+        {
+            if (await customerInfoRepository.CustomerExistsAsync(customerId))
+            {
+                logger.LogInformation($"Customer with Id {customerId} was not found when accessing to operation");
+                return NotFound();
+            }
+
+            var customerOperationsForCustomer = await customerInfoRepository
+                .GetOperationsForCustomerAsync(customerId);
+
+            return Ok(mapper.Map<IEnumerable<CustomerOperationsDto>>(customerOperationsForCustomer));
+        }
+
+        [HttpGet("{operationId}", Name = "GetCustomerOperation")]
+        public async Task<ActionResult<IEnumerable<CustomerOperationsDto>>> GetCustomerOperation(
+            int customerId, int operationId)
+        {
+            if (await customerInfoRepository.CustomerExistsAsync(customerId))
+            {
+                logger.LogInformation($"Customer with Id {customerId} was not found when accessing to operation");
+                return NotFound();
+            }
+
+            var customerOperation = await customerInfoRepository
+                .GetOperationForCustomerAsync(customerId, operationId);
+
+            if (customerOperation == null)
             {
                 return NotFound();
             }
 
-            return Ok(customer.CustomerOperations);
-        }
-        [HttpGet("{operationId}", Name = "GetCustomerOperation")]
-        public ActionResult<IEnumerable<CustomerOperationsDto>> GetCustomerOperation(
-            int customerId, int operationId)
-        {
-            try
-            {
-                var customer = this.customerDataStore.Customers
-                .FirstOrDefault(x => x.Id == customerId);
+            return Ok(mapper.Map<CustomerOperationsDto>(customerOperation));
 
-                if (customer == null)
-                {
-                    logger.LogInformation($"Customer with id {customerId} is not valid");
-                    return NotFound();
-                }
-
-                var customerOperation = customer.CustomerOperations
-                    .FirstOrDefault(o => o.Id == operationId);
-
-                if (customerOperation == null)
-                {
-                    return NotFound();
-                }
-
-                return Ok(customerOperation);
-            }
-            catch (Exception ex)
-            {
-                logger.LogCritical($"Customer with id {customerId} is not valid", ex);
-                return StatusCode(500, "A problem happened while handling your request");
-            }
-            
         }
 
         [HttpPost]
-        public ActionResult<CustomerOperationsDto> CreateCustomerOperation(int customerId, CustomerOperationForCreationDto operation)
+        public async Task<ActionResult<CustomerOperationsDto>> CreateCustomerOperation(int customerId, CustomerOperationForCreationDto operation)
         {
-            var customer = this.customerDataStore.Customers
-                .FirstOrDefault(x => x.Id == customerId);
-            if (customer == null)
+            if (!await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 return NotFound();
             }
 
-            var maxOpeatarionId = this.customerDataStore
-                .Customers.SelectMany(
-                c => c.CustomerOperations).Max(p => p.Id);
+            var finalOperation = mapper.Map<CustomerOperation>(operation);
 
-            var finalOperation = new CustomerOperationsDto
-            {
-                Id = ++maxOpeatarionId,
-                Name = operation.Name,
-                Price = operation.Price
-            };
+            await customerInfoRepository.AddCustomerOperationForCustomerAsync(customerId, finalOperation);
+            await customerInfoRepository.SaveChangesAsync();
 
-            customer.CustomerOperations.Add(finalOperation);
-
+            var createdOperationToReturn = mapper.Map<CustomerOperationsDto>(finalOperation);
             return CreatedAtRoute("GetCustomerOperation", new
             {
                 customerId = customerId,
-                operationId = finalOperation.Id
-            }, finalOperation);
+                operationId = createdOperationToReturn.Id
+            }, createdOperationToReturn);
         }
 
         [HttpPut("{operationId}")]
-        public ActionResult UpdateCustomerOperation(int customerId, int operationId, 
+        public async Task<ActionResult> UpdateCustomerOperation(int customerId, int operationId,
             CustomerOperationForUpdatingDto customerOperation)
         {
-            var customer = this.customerDataStore.Customers
-                .FirstOrDefault(x => x.Id == customerId);
-            if (customer == null)
+            //var customer = this.customerDataStore.Customers
+            //    .FirstOrDefault(x => x.Id == customerId);
+            if (!await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 return NotFound();
             }
 
             //Find operation
-            var operationFromStore = customer.CustomerOperations
-                .FirstOrDefault(x => x.Id == operationId);
-            if (operationFromStore == null)
+            var customerOperationEntitiy = await customerInfoRepository
+                .GetOperationForCustomerAsync(customerId, operationId);
+            if (customerOperationEntitiy == null)
             {
                 return NotFound();
             }
 
-            operationFromStore.Name = customerOperation.Name;
-            operationFromStore.Price = customerOperation.Price;
+            mapper.Map(customerOperation, customerOperationEntitiy);
+
+            await customerInfoRepository.SaveChangesAsync();
 
             return NoContent();
         }
 
         [HttpPatch("{operationId}")]
-        public ActionResult PartiallyUpdateCustomerOperation(int customerId, int operationId, JsonPatchDocument<CustomerOperationForUpdatingDto> patchDocument)
+        public async Task<ActionResult> PartiallyUpdateCustomerOperation(
+            int customerId, int operationId, 
+            JsonPatchDocument<CustomerOperationForUpdatingDto> patchDocument)
         {
-            var customer = this.customerDataStore.Customers
-                .FirstOrDefault(x => x.Id == customerId);
-            if (customer == null)
+            if (!await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 return NotFound();
             }
 
-            var operationFromStore = customer.CustomerOperations
-               .FirstOrDefault(x => x.Id == operationId);
-            if (operationFromStore == null)
+            var customerOperationEntitiy = await customerInfoRepository
+               .GetOperationForCustomerAsync(customerId, operationId);
+            if (customerOperationEntitiy == null)
             {
                 return NotFound();
             }
 
-            var customerOperationToPatch = new CustomerOperationForUpdatingDto
-            {
-                Name = operationFromStore.Name,
-                Price = operationFromStore.Price
-            };
+            var operationToPatch = mapper.Map<CustomerOperationForUpdatingDto>(customerOperationEntitiy);
 
-            patchDocument.ApplyTo(customerOperationToPatch, ModelState);
+            patchDocument.ApplyTo(operationToPatch,ModelState);
 
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
 
-            if (!TryValidateModel(customerOperationToPatch))
+            if (!TryValidateModel(operationToPatch))
             {
                 return BadRequest();
             }
 
-            operationFromStore.Name = customerOperationToPatch.Name;
-            operationFromStore.Price = customerOperationToPatch.Price;
+            mapper.Map(operationToPatch  ,customerOperationEntitiy);
 
-            return NoContent();
+            await customerInfoRepository.SaveChangesAsync();
+
+            return NoContent();             
         }
 
         [HttpDelete("{operationId}")]
-        public ActionResult DeleteCustomerOperation(int customerId,int operationId)
-        {
-            var customer = this.customerDataStore.Customers
-             .FirstOrDefault(x => x.Id == customerId);
-            if (customer == null)
+        public async Task<ActionResult> DeleteCustomerOperation(int customerId, int operationId)
+        { 
+            if (!await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 return NotFound();
             }
 
-            var operationFromStore = customer.CustomerOperations
-               .FirstOrDefault(x => x.Id == operationId);
-            if (operationFromStore == null)
+            var customerOperationEntitiy = await customerInfoRepository
+              .GetOperationForCustomerAsync(customerId, operationId);
+            if (customerOperationEntitiy == null)
             {
                 return NotFound();
             }
 
-            customer.CustomerOperations.Remove(operationFromStore);
+            customerInfoRepository.DeleteCustomerOperation(customerOperationEntitiy);
+            await customerInfoRepository.SaveChangesAsync();
+
             localMailService.Send("Customer operation deleted.",
-                $"Customer operation {operationFromStore.Name} with price {operationFromStore.Price} was deleted");
+                $"Customer operation {customerOperationEntitiy.Name} with price {customerOperationEntitiy.Price} was deleted");
 
             return NoContent();
         }

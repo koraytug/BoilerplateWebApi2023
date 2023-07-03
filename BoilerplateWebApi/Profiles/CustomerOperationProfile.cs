@@ -9,6 +9,9 @@ namespace BoilerplateWebApi.Profiles
         public CustomerOperationProfile()
         {
             CreateMap<CustomerOperation, CustomerOperationsDto>();
+            CreateMap<CustomerOperationForCreationDto, CustomerOperation>();
+            CreateMap<CustomerOperationForUpdatingDto, CustomerOperation>();
+            CreateMap<CustomerOperation,CustomerOperationForUpdatingDto>();
         }
     }
 }
