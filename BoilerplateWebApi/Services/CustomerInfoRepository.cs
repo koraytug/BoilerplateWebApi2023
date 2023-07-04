@@ -34,13 +34,8 @@ namespace BoilerplateWebApi.Services
         {
             return await context.Customers.OrderBy(c => c.Name).ToListAsync();
         }
-        public async Task<IEnumerable<Customer>> GetCustomersAsync(string? name, string? searchQuery)
+        public async Task<(IEnumerable<Customer>,PaginationMetaData)> GetCustomersAsync(string? name, string? searchQuery, int pageNumber, int pageSize)
         {
-            if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(searchQuery))
-            {
-                return await GetCustomersAsync();
-            }
-
             // collection to start from
             var collection = context.Customers as IQueryable<Customer>;
 
@@ -58,7 +53,16 @@ namespace BoilerplateWebApi.Services
                 );
             }
 
-            return await collection.OrderBy(c => c.Name).ToListAsync();          
+            var totalItemCount = await collection.CountAsync();
+
+            var paginationMetaData = new PaginationMetaData(totalItemCount, pageSize, pageNumber);
+
+            var collectionToReturn = await collection.OrderBy(c => c.Name)
+                .Skip(pageSize *(pageNumber-1))
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (collectionToReturn,paginationMetaData);
         }
 
         public async Task<CustomerOperation?> GetOperationForCustomerAsync(int customerId, int operationId)

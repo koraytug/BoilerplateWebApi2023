@@ -2,6 +2,7 @@
 using BoilerplateWebApi.Models;
 using BoilerplateWebApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace BoilerplateWebApi.Controllers
 {
@@ -10,7 +11,7 @@ namespace BoilerplateWebApi.Controllers
     public class CustomersController : ControllerBase
     {
         private readonly IMapper mapper;
-
+        const int maxCustomerSize = 20;
         public ICustomerInfoRepository customerInfoRepository { get; }
 
         public CustomersController(ICustomerInfoRepository customerInfoRepository,
@@ -21,9 +22,18 @@ namespace BoilerplateWebApi.Controllers
         }
         //[HttpGet("api/customer")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CustomerWithoutOperationDto>>> GetCustomers([FromQuery]string? name, string? searchQuery)
+        public async Task<ActionResult<IEnumerable<CustomerWithoutOperationDto>>> GetCustomers([FromQuery] string? name, string? searchQuery,
+            int pageNumber = 1, int pageSize = 10)
         {
-            var customerEntities = await customerInfoRepository.GetCustomersAsync(name, searchQuery);
+            if (pageSize > maxCustomerSize)
+            {
+                pageSize = maxCustomerSize;
+            }
+
+            var (customerEntities, paginationMetaData) = await customerInfoRepository.GetCustomersAsync(name, searchQuery, pageNumber, pageSize);
+
+            Response.Headers.Add("X-Pagination",
+                JsonSerializer.Serialize(paginationMetaData));
 
             return Ok(mapper.Map<IEnumerable<CustomerWithoutOperationDto>>(customerEntities));
         }
@@ -33,12 +43,12 @@ namespace BoilerplateWebApi.Controllers
         {
             var customer = await customerInfoRepository.GetCustomerAsync(id, includeOperations);
 
-            if(customer== null)
+            if (customer == null)
             {
                 return NotFound();
             }
 
-            if(includeOperations)
+            if (includeOperations)
             {
                 return Ok(mapper.Map<CustomerDto>(customer));
             }
