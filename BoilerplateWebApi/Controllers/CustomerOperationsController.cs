@@ -49,7 +49,7 @@ namespace BoilerplateWebApi.Controllers
         public async Task<ActionResult<IEnumerable<CustomerOperationsDto>>> GetCustomerOperation(
             int customerId, int operationId)
         {
-            if (await customerInfoRepository.CustomerExistsAsync(customerId))
+            if (! await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 logger.LogInformation($"Customer with Id {customerId} was not found when accessing to operation");
                 return NotFound();
@@ -92,8 +92,6 @@ namespace BoilerplateWebApi.Controllers
         public async Task<ActionResult> UpdateCustomerOperation(int customerId, int operationId,
             CustomerOperationForUpdatingDto customerOperation)
         {
-            //var customer = this.customerDataStore.Customers
-            //    .FirstOrDefault(x => x.Id == customerId);
             if (!await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 return NotFound();

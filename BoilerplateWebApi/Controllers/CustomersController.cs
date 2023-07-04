@@ -21,9 +21,9 @@ namespace BoilerplateWebApi.Controllers
         }
         //[HttpGet("api/customer")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CustomerWithoutOperationDto>>> GetCustomers()
+        public async Task<ActionResult<IEnumerable<CustomerWithoutOperationDto>>> GetCustomers([FromQuery]string? name, string? searchQuery)
         {
-            var customerEntities = await customerInfoRepository.GetCustomersAsync();
+            var customerEntities = await customerInfoRepository.GetCustomersAsync(name, searchQuery);
 
             return Ok(mapper.Map<IEnumerable<CustomerWithoutOperationDto>>(customerEntities));
         }

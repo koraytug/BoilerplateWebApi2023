@@ -1,6 +1,7 @@
 ﻿using BoilerplateWebApi.DbContexts;
 using BoilerplateWebApi.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace BoilerplateWebApi.Services
 {
@@ -32,6 +33,32 @@ namespace BoilerplateWebApi.Services
         public async Task<IEnumerable<Customer>> GetCustomersAsync()
         {
             return await context.Customers.OrderBy(c => c.Name).ToListAsync();
+        }
+        public async Task<IEnumerable<Customer>> GetCustomersAsync(string? name, string? searchQuery)
+        {
+            if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(searchQuery))
+            {
+                return await GetCustomersAsync();
+            }
+
+            // collection to start from
+            var collection = context.Customers as IQueryable<Customer>;
+
+            if(!string.IsNullOrEmpty(name))
+            {
+                name = name.Trim();
+                collection = collection.Where(c => c.Name == name);
+            }
+
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                searchQuery = searchQuery.Trim();
+                collection = collection.Where(a => a.Name.Contains(searchQuery)
+                || (a.Email != null && a.Email.Contains(searchQuery))
+                );
+            }
+
+            return await collection.OrderBy(c => c.Name).ToListAsync();          
         }
 
         public async Task<CustomerOperation?> GetOperationForCustomerAsync(int customerId, int operationId)
