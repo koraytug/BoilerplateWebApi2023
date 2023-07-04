@@ -12,6 +12,8 @@ namespace BoilerplateWebApi.Services
         Task<CustomerOperation?> GetOperationForCustomerAsync(int customerId, int operationId);
         Task AddCustomerOperationForCustomerAsync(int customerId, CustomerOperation operation);
         void DeleteCustomerOperation(CustomerOperation operation);
+
+        Task<bool> CustomerNameMatchesCustomerId(string? customerName, int customerId);
         Task<bool> SaveChangesAsync();
     }
 }

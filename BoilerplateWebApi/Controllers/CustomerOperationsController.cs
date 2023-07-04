@@ -2,6 +2,7 @@
 using BoilerplateWebApi.Entities;
 using BoilerplateWebApi.Models;
 using BoilerplateWebApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.StaticFiles;
 namespace BoilerplateWebApi.Controllers
 {
     [Route("api/customers/{customerId}/customeroperations")]
+    [Authorize]
     [ApiController]
     public class CustomerOperationsController : ControllerBase
     {
@@ -49,6 +51,13 @@ namespace BoilerplateWebApi.Controllers
         public async Task<ActionResult<IEnumerable<CustomerOperationsDto>>> GetCustomerOperation(
             int customerId, int operationId)
         {
+            var customerName = User.Claims.FirstOrDefault(c => c.Type == "city")?.Value;
+
+            if(!(await customerInfoRepository.CustomerNameMatchesCustomerId(customerName, customerId)))
+            {
+                return Forbid();
+            }
+
             if (! await customerInfoRepository.CustomerExistsAsync(customerId))
             {
                 logger.LogInformation($"Customer with Id {customerId} was not found when accessing to operation");

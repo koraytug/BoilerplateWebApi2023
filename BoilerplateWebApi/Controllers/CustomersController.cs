@@ -1,12 +1,14 @@
 ﻿using AutoMapper;
 using BoilerplateWebApi.Models;
 using BoilerplateWebApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
 namespace BoilerplateWebApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/customers")]
     public class CustomersController : ControllerBase
     {

@@ -96,5 +96,10 @@ namespace BoilerplateWebApi.Services
         {
             context.CustomerOperations.Remove(operation);
         }
+
+        public async Task<bool> CustomerNameMatchesCustomerId(string? customerName, int customerId)
+        {
+            return await context.Customers.AnyAsync(c => c.Id == customerId && c.Name == customerName);
+        }
     }
 }
